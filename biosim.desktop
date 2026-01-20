@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Bio-Sim
+Comment=Boids simulation with fish and bird behavior
+Exec=/home/pranav/BioSim/dist/biosim-linux-v1
+Icon=/home/pranav/BioSim/dna-icon.png
+Terminal=false
+Categories=Simulation;Education;Science;
