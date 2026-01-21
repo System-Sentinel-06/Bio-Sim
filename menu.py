@@ -2,8 +2,7 @@ import math
 import random
 import pygame
 from boid1 import boid
-WIDTH, HEIGHT = 1920, 1200
-FPS = 60
+import constants
 
 class MenuBoid(boid):
     def __init__(self, x, y):
@@ -56,8 +55,6 @@ class MenuBoid(boid):
 
 def draw_custom_header(screen, title_text):
     font = pygame.font.SysFont('Arial', 25)
-    # Smaller font so icons fit nicely inside the squares
-    symbol_font = pygame.font.SysFont('Arial', 18, bold=True)
     symbol_font2 = pygame.font.SysFont('Arial', 12, bold=True)
     HEADER_HEIGHT = 45
 
@@ -69,52 +66,52 @@ def draw_custom_header(screen, title_text):
         title_color = (180, 255, 0)
 
     # 2. Create Background Surface
-    header_surf = pygame.Surface((WIDTH, HEADER_HEIGHT), pygame.SRCALPHA)
+    header_surf = pygame.Surface((constants.WIDTH, HEADER_HEIGHT), pygame.SRCALPHA)
 
-    if title_text.upper() == "FISH SIM" or title_text.upper() == "BIRD SIM":
+    # Logic for simulation vs menu background
+    is_sim = title_text.upper() in ["FISH SIM", "BIRD SIM"]
+
+    if is_sim:
         header_surf.fill((10, 20, 35, 204))
     else:
         header_surf.fill((10, 20, 35, 160))
-        for i in range(-HEADER_HEIGHT, WIDTH, 24):
+        for i in range(-HEADER_HEIGHT, constants.WIDTH, 24):
             pygame.draw.line(header_surf, (*title_color, 40), (i, 0), (i + HEADER_HEIGHT, HEADER_HEIGHT), 5)
 
-    # 3. Add the Glow Border
-    pygame.draw.line(header_surf, title_color, (0, HEADER_HEIGHT-1), (WIDTH, HEADER_HEIGHT-1), 2)
-
-    # 4. BLIT Background to Screen
+    # 3. Add Glow Border and BLIT
+    pygame.draw.line(header_surf, title_color, (0, HEADER_HEIGHT-1), (constants.WIDTH, HEADER_HEIGHT-1), 2)
     screen.blit(header_surf, (0, 0))
 
-    # 5. RENDER TEXT
+    # 4. RENDER TEXT
     title_surf = font.render(title_text.upper(), True, title_color)
-    screen.blit(title_surf, (WIDTH // 2 - title_surf.get_width() // 2, 10))
+    screen.blit(title_surf, (constants.WIDTH // 2 - title_surf.get_width() // 2, 10))
 
-    # 6. WINDOW CONTROLS (X and Minimize)
+    # 5. WINDOW CONTROLS LOGIC
     mx, my = pygame.mouse.get_pos()
+    close_rect = pygame.Rect(constants.WIDTH - 32, (HEADER_HEIGHT - 25) // 2, 25, 25)
+    min_rect = pygame.Rect(constants.WIDTH - 77, (HEADER_HEIGHT - 25) // 2, 25, 25)
 
-    close_rect = pygame.Rect(WIDTH - 32, (HEADER_HEIGHT - 25) // 2, 25, 25)
-    min_rect = pygame.Rect(WIDTH - 77, (HEADER_HEIGHT - 25) // 2, 25, 25)
-
-    # Keep your original hitbox logic
+    # Hitbox for the event loop
     close_hitbox = close_rect.inflate(20, 20)
 
-    # Color logic exactly as provided
-    c_color = (255, 50, 50) if close_rect.collidepoint(mx, my) else title_color
-    m_color = (123, 0, 247) if min_rect.collidepoint(mx, my) else title_color
+    # 6. CONDITIONAL DRAWING
+    # Only draw the buttons if we are NOT in the simulation
+    if not is_sim:
+        c_color = (255, 50, 50) if close_rect.collidepoint(mx, my) else title_color
+        m_color = (123, 0, 247) if min_rect.collidepoint(mx, my) else title_color
 
-    # Draw the surrounding square boxes using title_color
-    pygame.draw.rect(screen, title_color, close_rect, 1)
-    pygame.draw.rect(screen, title_color, min_rect, 1)
+        pygame.draw.rect(screen, title_color, close_rect, 1)
+        pygame.draw.rect(screen, title_color, min_rect, 1)
 
-    # Render symbols with the smaller font
-    c_surf = symbol_font2.render("X", True, c_color)
-    m_surf = symbol_font2.render("—", True, m_color)
+        c_surf = symbol_font2.render("X", True, c_color)
+        m_surf = symbol_font2.render("—", True, m_color)
 
-    # Center symbols inside their boxes
-    screen.blit(c_surf, (close_rect.centerx - c_surf.get_width() // 2,
-                         close_rect.centery - c_surf.get_height() // 2))
-    screen.blit(m_surf, (min_rect.centerx - m_surf.get_width() // 2,
-                         min_rect.centery - m_surf.get_height() // 2))
+        screen.blit(c_surf, (close_rect.centerx - c_surf.get_width() // 2,
+                             close_rect.centery - c_surf.get_height() // 2))
+        screen.blit(m_surf, (min_rect.centerx - m_surf.get_width() // 2,
+                             min_rect.centery - m_surf.get_height() // 2))
 
+    # Always return the hitboxes so handle_window_controls doesn't crash
     return close_hitbox, min_rect
 
 def handle_window_controls(event, close_rect, min_rect):

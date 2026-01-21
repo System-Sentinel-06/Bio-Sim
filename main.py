@@ -9,9 +9,7 @@ from menu import MenuBoid, draw_custom_header, handle_window_controls, draw_anim
 from boid1 import Fish, PredatorFish
 from boid2 import Bird, PredatorBird
 from environment import WaterEffects
-
-WIDTH, HEIGHT = 1920, 1200
-FPS = 60
+import constants
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -37,22 +35,22 @@ def build_spatial_grid(entities, cell_size):
 
 # --- OCEAN SIMULATION ---
 def fish_main(screen, clock, font):
-    fish_num = 700
-    water = WaterEffects(WIDTH, HEIGHT)
-    school = [Fish(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(fish_num)]
-    CENTER_POINT = pygame.Vector2(WIDTH // 2, HEIGHT // 2)
+    fish_num = 800
+    water = WaterEffects(constants.WIDTH, constants.HEIGHT)
+    school = [Fish(random.randint(0, constants.WIDTH), random.randint(0, constants.HEIGHT)) for _ in range(fish_num)]
+    CENTER_POINT = pygame.Vector2(constants.WIDTH // 2, constants.HEIGHT // 2)
     mode = 1
     predators = []
-    GRID_CELL_SIZE = 100
-
-    HEADER_HEIGHT = 45
-    W = screen.get_width()
-    close_rect = pygame.Rect(W - 40, (HEADER_HEIGHT - 30) // 2, 30, 30)
-    min_rect = pygame.Rect(W - 85, (HEADER_HEIGHT - 30) // 2, 30, 30)
-    close_hitbox = close_rect.inflate(20, 20)
-    min_hitbox = min_rect.inflate(20, 20)
+    # Scaled grid size
+    GRID_CELL_SIZE = int(constants.HEIGHT * 0.08)
 
     while True:
+        W = screen.get_width()
+        btn_size = int(constants.HEIGHT * 0.65)
+        close_rect = pygame.Rect(W - btn_size - 10, (constants.HEIGHT - btn_size) // 2, btn_size, btn_size)
+        min_rect = pygame.Rect(W - (btn_size * 2) - 25, (constants.HEIGHT - btn_size) // 2, btn_size, btn_size)
+        close_hitbox = close_rect.inflate(20, 20)
+        min_hitbox = min_rect.inflate(20, 20)
         for event in pygame.event.get():
             if event.type == pygame.QUIT: return "QUIT"
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -66,8 +64,10 @@ def fish_main(screen, clock, font):
                 elif event.key in [pygame.K_2, pygame.K_3]:
                     mode = 2 if event.key == pygame.K_2 else 3
                     if not predators:
-                        gates = [pygame.Vector2(-200, -200), pygame.Vector2(WIDTH+200, -200),
-                                 pygame.Vector2(-200, HEIGHT+200), pygame.Vector2(WIDTH+200, HEIGHT+200)]
+                        # Scaled predator gates
+                        offset = int(constants.WIDTH * 0.1)
+                        gates = [pygame.Vector2(-offset, -offset), pygame.Vector2(constants.WIDTH+offset, -offset),
+                                 pygame.Vector2(-offset, constants.HEIGHT+offset), pygame.Vector2(constants.WIDTH+offset, constants.HEIGHT+offset)]
                         predators = [PredatorFish(g.x, g.y) for g in gates]
                     for fish in school:
                         fish.max_speed, fish.max_force = (3.5, 0.1) if mode == 2 else (5.0, 0.2)
@@ -79,19 +79,20 @@ def fish_main(screen, clock, font):
         for p in predators:
             p.apply_force(p.predator_separation(predators) * 2)
             if mode == 1:
-                p.apply_force((pygame.Vector2(-600, -600) - p.position).normalize() * p.max_speed - p.velocity)
+                # Scaled idle point
+                p.apply_force((pygame.Vector2(-int(constants.WIDTH*0.3), -int(constants.HEIGHT*0.5)) - p.position).normalize() * p.max_speed - p.velocity)
             elif mode == 3:
                 p.is_bursting = False
                 p.max_speed = 4
                 to_center = (CENTER_POINT - p.position)
                 if to_center.length() > 0.001:
                     orbit_dir = pygame.Vector2(-to_center.y, to_center.x).normalize()
-                    p.apply_force(orbit_dir * 1.5 + to_center.normalize() * ((to_center.length() - 300) * 0.02))
+                    p.apply_force(orbit_dir * 1.5 + to_center.normalize() * ((to_center.length() - int(constants.HEIGHT*0.25)) * 0.02))
             else:
                 p.apply_force(p.hunt(school))
 
             p.update(mode, spatial_grid, GRID_CELL_SIZE)
-            if mode != 1: p.bounce_edges(WIDTH, HEIGHT)
+            if mode != 1: p.bounce_edges(constants.WIDTH, constants.HEIGHT)
             p.draw(screen)
 
         for fish in school:
@@ -106,7 +107,8 @@ def fish_main(screen, clock, font):
             if mode == 2:
                 sep, coh, ali = 10.0, 0.5, 1.0
                 for p in predators:
-                    if fish.position.distance_to(p.position) < 150:
+                    # Scaled flee radius
+                    if fish.position.distance_to(p.position) < int(constants.HEIGHT * 0.12):
                         flee_force += (fish.position - p.position).normalize() * fish.max_speed * 1.5 - fish.velocity
             elif mode == 3:
                 sep, coh, ali = 50.0, 25.0, 3.0
@@ -118,32 +120,33 @@ def fish_main(screen, clock, font):
             fish.apply_force(fish.cohesion(neighbors) * coh)
             fish.apply_force(fish.alignment(neighbors) * ali)
             fish.update(spatial_grid, GRID_CELL_SIZE)
-            fish.bounce_edges(WIDTH, HEIGHT)
+            fish.bounce_edges(constants.WIDTH, constants.HEIGHT)
             fish.draw(screen)
 
         display_title = "Fish Sim"
-        close_btn, min_btn = draw_custom_header(screen,display_title)
+        draw_custom_header(screen,display_title)
         pygame.display.flip()
-        clock.tick(FPS)
+        clock.tick(constants.FPS)
 
 # --- AERIAL SIMULATION ---
 def bird_main(screen, clock, font):
     mode = "SCOUT"
-    birds = [Bird(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(500)]
-    predator = PredatorBird(WIDTH // 2, HEIGHT // 2)
-    GRID_CELL_SIZE = 220
+    birds = [Bird(random.randint(0, constants.WIDTH), random.randint(0, constants.HEIGHT)) for _ in range(500)]
+    predator = PredatorBird(constants.WIDTH // 2, constants.HEIGHT // 2)
+    # Scaled grid size
+    GRID_CELL_SIZE = int(constants.HEIGHT * 0.18)
     current_zoom, target_zoom = 0.6, 0.6
-    clouds = [{'pos': pygame.Vector2(random.randint(-3000, 5000), random.randint(-3000, 5000)),
-               'size': random.randint(600, 1300), 'depth': random.uniform(0.1, 0.4)} for _ in range(30)]
-
-    HEADER_HEIGHT = 45
-    W = screen.get_width()
-    close_rect = pygame.Rect(W - 40, (HEADER_HEIGHT - 30) // 2, 30, 30)
-    min_rect = pygame.Rect(W - 85, (HEADER_HEIGHT - 30) // 2, 30, 30)
-    close_hitbox = close_rect.inflate(20, 20)
-    min_hitbox = min_rect.inflate(20, 20)
+    # Scaled cloud bounds
+    clouds = [{'pos': pygame.Vector2(random.randint(-int(constants.WIDTH*1.5), int(constants.WIDTH*2.5)), random.randint(-int(constants.HEIGHT*2.5), int(constants.HEIGHT*4))),
+               'size': random.randint(int(constants.HEIGHT*0.5), int(constants.HEIGHT*1.1)), 'depth': random.uniform(0.1, 0.4)} for _ in range(30)]
 
     while True:
+        W = screen.get_width()
+        btn_size = int(constants.HEIGHT * 0.65)
+        close_rect = pygame.Rect(W - btn_size - 10, (constants.HEIGHT - btn_size) // 2, btn_size, btn_size)
+        min_rect = pygame.Rect(W - (btn_size * 2) - 25, (constants.HEIGHT - btn_size) // 2, btn_size, btn_size)
+        close_hitbox = close_rect.inflate(20, 20)
+        min_hitbox = min_rect.inflate(20, 20)
         for event in pygame.event.get():
             if event.type == pygame.QUIT: return "QUIT"
             if event.type == pygame.MOUSEBUTTONDOWN:
@@ -159,31 +162,31 @@ def bird_main(screen, clock, font):
 
         # Parallax Clouds
         for c in clouds:
-            rel_x = (c['pos'].x - predator.position.x * c['depth']) * current_zoom + (WIDTH // 2)
-            rel_y = (c['pos'].y - predator.position.y * c['depth']) * current_zoom + (HEIGHT // 2)
+            rel_x = (c['pos'].x - predator.position.x * c['depth']) * current_zoom + (constants.WIDTH // 2)
+            rel_y = (c['pos'].y - predator.position.y * c['depth']) * current_zoom + (constants.HEIGHT // 2)
             scaled_size = int(c['size'] * current_zoom)
-            if -scaled_size < rel_x < WIDTH + scaled_size:
+            if -scaled_size < rel_x < constants.WIDTH + scaled_size:
                 c_surf = pygame.Surface((scaled_size, scaled_size//2), pygame.SRCALPHA)
                 pygame.draw.ellipse(c_surf, (255, 255, 255, 50), (0, 0, scaled_size, scaled_size//2))
                 screen.blit(c_surf, (rel_x, rel_y))
 
-        flock_center = sum((b.position for b in birds), pygame.Vector2(0,0)) / len(birds) if birds else pygame.Vector2(WIDTH//2, HEIGHT//2)
+        flock_center = sum((b.position for b in birds), pygame.Vector2(0,0)) / len(birds) if birds else pygame.Vector2(constants.WIDTH//2, constants.HEIGHT//2)
 
         for b in birds:
-            b.update(WIDTH, HEIGHT, spatial_grid, GRID_CELL_SIZE, flock_center, (b == predator.target_bird and mode == "HUNT"), predator)
-        predator.update(mode, spatial_grid, GRID_CELL_SIZE, flock_center, WIDTH, HEIGHT)
+            b.update(constants.WIDTH, constants.HEIGHT, spatial_grid, GRID_CELL_SIZE, flock_center, (b == predator.target_bird and mode == "HUNT"), predator)
+        predator.update(mode, spatial_grid, GRID_CELL_SIZE, flock_center, constants.WIDTH, constants.HEIGHT)
 
         all_entities = sorted(birds + [predator], key=lambda e: e.position.y)
         for e in all_entities:
             if isinstance(e, Bird):
-                e.draw(screen, predator.position, current_zoom, WIDTH, HEIGHT, (e == predator.target_bird and mode == "HUNT"))
+                e.draw(screen, predator.position, current_zoom, constants.WIDTH, constants.HEIGHT, (e == predator.target_bird and mode == "HUNT"))
             else:
-                e.draw(screen, current_zoom, WIDTH, HEIGHT)
+                e.draw(screen, current_zoom, constants.WIDTH, constants.HEIGHT)
 
         display_title = "Bird Sim"
         draw_custom_header(screen,display_title)
         pygame.display.flip()
-        clock.tick(FPS)
+        clock.tick(constants.FPS)
 
 # --- MAIN LAUNCHER ---
 def main():
@@ -191,38 +194,33 @@ def main():
     pygame.mixer.init()
     music_file = resource_path("bg_music.mp3")
     pygame.mixer.music.load(music_file)
-    icon_image = pygame.image.load(resource_path("dna-icon.png"))
-    pygame.display.set_icon(icon_image)
     pygame.display.set_caption("Bio-Sim")
     pygame.mixer.music.play(-1)
-    screen = pygame.display.set_mode((1920, 1200),pygame.NOFRAME)
-    WIDTH, HEIGHT = screen.get_size()
+    # Using dynamic constants.WIDTH/constants.HEIGHT
+    screen = pygame.display.set_mode((constants.WIDTH, constants.HEIGHT), pygame.NOFRAME)
     clock = pygame.time.Clock()
+    # Using dynamic FONT sizes
     font = pygame.font.SysFont(["arial", "freesans"], 1, bold=True)
-    font2 = pygame.font.SysFont(["arial", "freesans"], 50, bold=True)
-    sub_font = pygame.font.SysFont(["arial", "freesans"], 28, bold=True)
-    title_font = pygame.font.SysFont(["arial", "freesans"], 40, bold=True)
+    font2 = pygame.font.SysFont(["arial", "freesans"], constants.FONT_SIZE_L, bold=True)
+    sub_font = pygame.font.SysFont(["arial", "freesans"], constants.FONT_SIZE_S, bold=True)
+    title_font = pygame.font.SysFont(["arial", "freesans"], constants.FONT_SIZE_M, bold=True)
     display_title = "Bio-Sim"
 
     # --- SETUP BACKGROUND ---
-    # Create 50 boids using our new MenuBoid class
-    bg_flock = [MenuBoid(random.randint(0, WIDTH), random.randint(0, HEIGHT)) for _ in range(400)]
-    SIDEBAR_WIDTH = 300
+    bg_flock = [MenuBoid(random.randint(0, constants.WIDTH), random.randint(0, constants.HEIGHT)) for _ in range(400)]
     state = "MENU"
 
     while state != "QUIT":
         if state == "MENU":
             display_title = "Bio-Sim"
-            #pygame.display.set_caption(display_title)
-            screen.fill((10, 15, 25)) # Deep Background
+            screen.fill((10, 15, 25))
 
             # 1. UPDATE AND DRAW BACKGROUND BOIDS
             for b in bg_flock:
-                # Apply the base forces you wrote
                 sep = b.separation(bg_flock)
                 sep = sep*5
                 coh = b.cohesion(bg_flock)
-                walls = b.avoid_walls(WIDTH, HEIGHT)
+                walls = b.avoid_walls(constants.WIDTH, constants.HEIGHT)
 
                 b.apply_force(sep * 1.5)
                 b.apply_force(coh * 0.5)
@@ -231,43 +229,32 @@ def main():
                 b.update()
                 b.draw(screen)
 
-            # 2. DRAW SIDEBAR PANEL
-            pygame.draw.rect(screen, (20, 30, 45), (0, 45, SIDEBAR_WIDTH, HEIGHT))
-            pygame.draw.line(screen, (50, 100, 150), (SIDEBAR_WIDTH, 45), (SIDEBAR_WIDTH, HEIGHT), 2)
+            # 2. DRAW SIDEBAR PANEL - Scaled using SIDEBAR_constants.WIDTH and HEADER_constants.HEIGHT
+            pygame.draw.rect(screen, (20, 30, 45), (0, constants.HEADER_HEIGHT, constants.SIDEBAR_WIDTH, constants.HEIGHT))
+            pygame.draw.line(screen, (50, 100, 150), (constants.SIDEBAR_WIDTH, constants.HEADER_HEIGHT), (constants.SIDEBAR_WIDTH, constants.HEIGHT), 2)
 
             mouse_pos = pygame.mouse.get_pos()
-            btn_x = 50
-            btn_w = 200
-            btn_h = 100
+            btn_w = int(constants.SIDEBAR_WIDTH * 0.75)
+            btn_h = int(constants.HEIGHT * 0.08)
+            btn_x = (constants.SIDEBAR_WIDTH - btn_w) // 2
 
-            title_rect = pygame.Rect(btn_x,150,btn_w,btn_h)
-            title_text = title_font.render("BIOSIM",True, (255,140,0))
+            # Scaled sidebar elements
+            title_rect = pygame.Rect(btn_x, int(constants.HEIGHT * 0.12), btn_w, btn_h)
+            title_text = title_font.render("BIOSIM", True, (255, 140, 0))
             screen.blit(title_text, (title_rect.centerx - title_text.get_width()//2, title_rect.centery - title_text.get_height()//2))
-            draw_animated_dna(screen, 150, 700, 400)
+            draw_animated_dna(screen, constants.DNA_CENTER_X, int(constants.HEIGHT * 0.58), int(constants.HEIGHT * 0.33))
 
-            # --- ENCASED PROJECT DESCRIPTION ---
-            # Define box dimensions
-            desc_box_w = 1000
-            desc_box_h = 300
-
-            # Center the box in the space to the right of the sidebar
-            # (Total Width - Sidebar) / 2 + Sidebar
-            center_x_area = ((WIDTH - SIDEBAR_WIDTH) // 2) + SIDEBAR_WIDTH
+            # --- ENCASED PROJECT DESCRIPTION --- - Scaled relative to screen
+            desc_box_w = int((constants.WIDTH - constants.SIDEBAR_WIDTH) * 0.8)
+            desc_box_h = int(constants.HEIGHT * 0.25)
+            center_x_area = ((constants.WIDTH - constants.SIDEBAR_WIDTH) // 2) + constants.SIDEBAR_WIDTH
             desc_x = center_x_area - (desc_box_w // 2)
-            desc_y = (HEIGHT // 2) - (desc_box_h // 2) - 125
+            desc_y = (constants.HEIGHT // 2) - (desc_box_h // 2) - int(constants.HEIGHT * 0.1)
 
-            # 1. Create a transparent Surface for the box
-            # We use pygame.SRCALPHA to enable the 4th color number (transparency)
             desc_surf = pygame.Surface((desc_box_w, desc_box_h))
-
-            # 2. Draw the minimal transparent yellow background (Alpha = 40)
-            # (255, 255, 0) is your Bright Yellow; 40 makes it a very faint tint
             pygame.draw.rect(desc_surf, (10, 15, 25, 0), (0, 0, desc_box_w, desc_box_h), border_radius=20)
+            pygame.draw.rect(desc_surf, (255, 255, 0), (0, 0, desc_box_w, desc_box_h), 3, border_radius=20)
 
-            # 3. Draw a solid Bright Yellow rounded border
-            pygame.draw.rect(desc_surf, (255, 255, 0), (0, 0, desc_box_w, desc_box_h), width=3, border_radius=20)
-
-            # 4. Render and blit the text onto the transparent surface
             about_lines = [
                 "WELCOME TO BIO-SIM!",
                 "THIS IS A FUN FLOCKING BEHAVIOR SIMULATION.",
@@ -276,79 +263,54 @@ def main():
             ]
 
             for i, line in enumerate(about_lines):
-                # Everything is bright yellow to match the box
                 text_surf = sub_font.render(line, True, (255, 255, 0))
-                # Center text inside the local box surface
                 text_x = (desc_box_w // 2) - (text_surf.get_width() // 2)
-                desc_surf.blit(text_surf, (text_x, 40 + (i * 45) + 10))
+                desc_surf.blit(text_surf, (text_x, int(desc_box_h * 0.15) + (i * int(constants.HEIGHT * 0.045))))
 
-            # 5. Finally, blit the entire box onto the main screen
             screen.blit(desc_surf, (desc_x, desc_y))
 
-            # --- OCEAN BUTTON ---
-            box1_rect = pygame.Rect(btn_x, 350, btn_w, btn_h)
+            # --- OCEAN BUTTON --- - Scaled
+            box1_rect = pygame.Rect(btn_x, int(constants.HEIGHT * 0.3), btn_w, btn_h)
             is_hover1 = box1_rect.collidepoint(mouse_pos)
-
-            # Draw a bright glow if hovering
             color1 = (30, 100, 200) if is_hover1 else (25, 45, 70)
             pygame.draw.rect(screen, color1, box1_rect, border_radius=15)
-            pygame.draw.rect(screen, (0, 255, 255), box1_rect, width=3, border_radius=15) # Neon border
-
-            txt1 = sub_font.render("FISH SIM", True, (0, 255, 255))
+            pygame.draw.rect(screen, (0, 212, 255), box1_rect, 3, border_radius=15)
+            txt1 = sub_font.render("FISH SIM", True, (0, 212, 255))
             screen.blit(txt1, (box1_rect.centerx - txt1.get_width()//2, box1_rect.centery - txt1.get_height()//2))
 
-            # --- AERIAL BUTTON ---
-            box2_rect = pygame.Rect(btn_x, 500, btn_w, btn_h)
+            # --- AERIAL BUTTON --- - Scaled
+            box2_rect = pygame.Rect(btn_x, int(constants.HEIGHT * 0.42), btn_w, btn_h)
             is_hover2 = box2_rect.collidepoint(mouse_pos)
-
             color2 = (80, 150, 30) if is_hover2 else (35, 60, 35)
             pygame.draw.rect(screen, color2, box2_rect, border_radius=15)
-            pygame.draw.rect(screen, (180, 255, 0), box2_rect, width=3, border_radius=15) # Neon border
-
+            pygame.draw.rect(screen, (180, 255, 0), box2_rect, 3, border_radius=15)
             txt2 = sub_font.render("BIRD SIM", True, (180, 255, 0))
             screen.blit(txt2, (box2_rect.centerx - txt2.get_width()//2, box2_rect.centery - txt2.get_height()//2))
-
 
             close_btn, min_btn = draw_custom_header(screen,display_title)
             for event in pygame.event.get():
                 handle_window_controls(event, close_btn, min_btn)
-                if event.type == pygame.QUIT:
-                    state = "QUIT"
-
-                # --- NEW CLICKING LOGIC ---
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:
-                        if box1_rect.collidepoint(event.pos):
-                            state = "FISH_PREVIEW"  # Go to briefing first
-                        if box2_rect.collidepoint(event.pos):
-                            state = "BIRD_PREVIEW"  # Go to briefing first
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        state = "QUIT"
-            pygame.display.flip()
-            clock.tick(60)
+                if event.type == pygame.QUIT: state = "QUIT"
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    if box1_rect.collidepoint(event.pos): state = "FISH_PREVIEW"
+                    if box2_rect.collidepoint(event.pos): state = "BIRD_PREVIEW"
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: state = "QUIT"
+            pygame.display.flip(); clock.tick(constants.FPS)
 
         elif state == "BIRD_PREVIEW":
             display_title = "Bird Sim Preview"
-            #pygame.display.set_caption(display_title)
-            # 1. Keep drawing the menu background so it doesn't just go black
             screen.fill((10, 15, 25))
-            for b in bg_flock:
-                b.update(); b.draw(screen)
+            for b in bg_flock: b.update(); b.draw(screen)
+            overlay = pygame.Surface((constants.WIDTH, constants.HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 200)); screen.blit(overlay, (0,0))
 
-            # 2. Draw Dark Overlay
-            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200)) # 200 is the transparency
-            screen.blit(overlay, (0,0))
-
-            # 3. Draw Explanation Box
-            info_rect = pygame.Rect(WIDTH//2 - 400, HEIGHT//2 - 300, 800, 600)
+            # Scaled Info Box
+            info_rect = pygame.Rect(constants.WIDTH//2 - int(constants.WIDTH*0.2), constants.HEIGHT//2 - int(constants.HEIGHT*0.25), int(constants.WIDTH*0.4), int(constants.HEIGHT*0.5))
             pygame.draw.rect(screen, (30, 45, 60), info_rect, border_radius=20)
-            pygame.draw.rect(screen, (180, 255, 0), info_rect, width=3, border_radius=20)
+            pygame.draw.rect(screen, (180, 255, 0), info_rect, 3, border_radius=20)
 
-            # 4. Text Content
             title = font2.render("BIRD FLOCK INFO", True, (180, 255, 0))
-            screen.blit(title, (info_rect.centerx - title.get_width()//2, info_rect.y + 40))
+            screen.blit(title, (info_rect.centerx - title.get_width()//2, info_rect.y + int(constants.HEIGHT * 0.03)))
 
             instructions = [
                 "• T: Toggle HUNT / SCOUT modes",
@@ -359,92 +321,65 @@ def main():
                 "CLICK TO BEGIN SIMULATION"
             ]
 
+            # Scaled vertical shift for simple if/else logic
+            start_y_offset = (info_rect.centery - (len(instructions) * int(constants.HEIGHT*0.04)) // 2) - int(constants.HEIGHT*0.03)
             for i, line in enumerate(instructions):
                 text_surf = sub_font.render(line, True, (180, 255, 0))
-                screen.blit(text_surf, (info_rect.x + 50, info_rect.y + 150 + (i * 50)))
+                screen.blit(text_surf, (info_rect.x + int(constants.WIDTH*0.02), start_y_offset + (i * int(constants.HEIGHT * 0.045))))
 
             close_btn, min_btn = draw_custom_header(screen,display_title)
-            # 5. Handle Transition
             for event in pygame.event.get():
                 handle_window_controls(event, close_btn, min_btn)
                 if event.type == pygame.QUIT: state = "QUIT"
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    state = "BIRD" # Finally enter the bird simulation
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        state = "MENU"
-            pygame.display.flip()
-            clock.tick(60)
+                if event.type == pygame.MOUSEBUTTONDOWN: state = "BIRD"
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: state = "MENU"
+            pygame.display.flip(); clock.tick(constants.FPS)
 
         elif state == "FISH_PREVIEW":
             display_title = "Fish Sim Preview"
-            #pygame.display.set_caption(display_title)
-            # 1. Background Animation
             screen.fill((10, 15, 25))
-            for b in bg_flock:
-                b.update(); b.draw(screen)
+            for b in bg_flock: b.update(); b.draw(screen)
+            overlay = pygame.Surface((constants.WIDTH, constants.HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 200)); screen.blit(overlay, (0,0))
 
-            # 2. Dark Overlay
-            overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-            overlay.fill((0, 0, 0, 200))
-            screen.blit(overlay, (0,0))
-
-            # 3. Info Box
-            info_rect = pygame.Rect(WIDTH//2 - 400, HEIGHT//2 - 300, 800, 600)
+            # Scaled Info Box
+            info_rect = pygame.Rect(constants.WIDTH//2 - int(constants.WIDTH*0.2), constants.HEIGHT//2 - int(constants.HEIGHT*0.25), int(constants.WIDTH*0.4), int(constants.HEIGHT*0.5))
             pygame.draw.rect(screen, (20, 40, 60), info_rect, border_radius=20)
-            pygame.draw.rect(screen, (0, 180, 255), info_rect, width=3, border_radius=20)
+            pygame.draw.rect(screen, (0, 180, 255), info_rect, 3, border_radius=20)
 
-            # 4. Briefing Content
             title = font2.render("FISH SCHOOL INFO", True, (0, 180, 255))
-            screen.blit(title, (info_rect.centerx - title.get_width()//2, info_rect.y + 40))
+            screen.blit(title, (info_rect.centerx - title.get_width()//2, info_rect.y + int(constants.HEIGHT * 0.03)))
 
             instructions = [
                 "• Press 1: Peaceful Schooling Mode",
                 "• Press 2: Predator Hunting Logic",
                 "• Press 3: Activate 'FISHNADO' Vortex",
                 "• ESC: Return to Info Page",
-                "",
                 "The water simulates fluid drag on all entities.",
                 "",
                 "CLICK TO BEGIN SIMULATION"
             ]
 
+            start_y_offset = (info_rect.centery - (len(instructions) * int(constants.HEIGHT*0.04)) // 2) - int(constants.HEIGHT*0.03)
             for i, line in enumerate(instructions):
                 text_surf = sub_font.render(line, True, (0, 180, 255))
-                screen.blit(text_surf, (info_rect.x + 50, info_rect.y + 150 + (i * 45)))
+                screen.blit(text_surf, (info_rect.x + int(constants.WIDTH*0.02), start_y_offset + (i * int(constants.HEIGHT * 0.045))))
 
             close_btn, min_btn = draw_custom_header(screen,display_title)
-            # 5. Transition
             for event in pygame.event.get():
                 handle_window_controls(event,close_btn,min_btn)
                 if event.type == pygame.QUIT: state = "QUIT"
-                if event.type == pygame.MOUSEBUTTONDOWN:
-                    state = "FISH"
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        state = "MENU"
-
-            pygame.display.flip()
-            clock.tick(60)
+                if event.type == pygame.MOUSEBUTTONDOWN: state = "FISH"
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE: state = "MENU"
+            pygame.display.flip(); clock.tick(constants.FPS)
 
         elif state == "FISH":
-            display_title = "Fish Sim"
-            #pygame.display.set_caption(display_title)
-            draw_custom_header(screen,display_title)
+            draw_custom_header(screen, "Fish Sim")
             state = fish_main(screen, clock, sub_font)
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        state = "FISH_PREVIEW"
         elif state == "BIRD":
-            display_title = "Bird Sim"
-            #pygame.display.set_caption(display_title)
-            draw_custom_header(screen,display_title)
+            draw_custom_header(screen, "Bird Sim")
             state = bird_main(screen, clock, sub_font)
-            for event in pygame.event.get():
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_ESCAPE:
-                        state = "BIRD_PREVIEW"
+
     pygame.quit()
 
 if __name__ == "__main__":
