@@ -27,7 +27,7 @@ jobs:
       - name: Package with PyInstaller
         # IMPORTANT: Use ; for Windows and ensure the script name (main.py) is correct
         run: |
-          pyinstaller --noconsole --onefile --add-data "bg_musiic.mp3;." main.py -n BioSim
+          pyinstaller --noconsole --onefile --add-data "bg_music.mp3;." main.py -n BioSim
 
       - name: Upload Windows Binary
         uses: actions/upload-artifact@v4
