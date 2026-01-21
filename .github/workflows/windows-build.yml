@@ -3,7 +3,7 @@ name: Build Windows Executable
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # Allows you to run this manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+          check-latest: true # Fixes potential header bugs in early 3.13 releases
 
       - name: Install Dependencies
         run: |
@@ -24,6 +25,7 @@ jobs:
           pip install pygame pyinstaller
 
       - name: Package with PyInstaller
+        # IMPORTANT: Use ; for Windows and ensure the script name (main.py) is correct
         run: |
           pyinstaller --noconsole --onefile --add-data "bg_musiic.mp3;." main.py -n BioSim
 
